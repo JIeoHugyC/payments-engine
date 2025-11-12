@@ -28,12 +28,13 @@ pub struct Transaction {
 }
 
 /// Client account state
+/// Field order matches required CSV output: client,available,held,total,locked
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Account {
+    pub client: u16,
     pub available: Decimal,
     pub held: Decimal,
     pub total: Decimal,
-    pub client: u16,
     pub locked: bool,
 }
 

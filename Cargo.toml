@@ -13,6 +13,7 @@ thiserror = "1.0"
 serde = { version = "1.0.228", features = ["derive"] }
 rust_decimal = { version = "1.33", features = ["serde"] }
 csv = "1.3"
+clap = { version = "4.5.51", features = ["derive"] }
 
 # Internal crates
 transaction-processor = { path = "crates/transaction-processor" }
@@ -26,6 +27,7 @@ edition.workspace = true
 anyhow.workspace = true
 serde.workspace = true
 csv.workspace = true
+clap.workspace = true
 transaction-processor.workspace = true
 
 [workspace.lints.clippy]

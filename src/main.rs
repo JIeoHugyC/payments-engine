@@ -1,45 +1,14 @@
+mod config;
+
 use anyhow::{Context, Result};
-use std::{
-    env,
-    io::{self, Write},
-    path::{Path, PathBuf},
-};
-use transaction_processor::{engine::TransactionEngine, transaction::Transaction};
-
-/// Trait for reading configuration parameters in an elegant way
-trait Config {
-    fn input_path(&self) -> &Path;
-}
-
-/// CLI configuration from command-line arguments
-struct CliConfig {
-    input_file: PathBuf,
-}
-
-impl Config for CliConfig {
-    fn input_path(&self) -> &Path {
-        &self.input_file
-    }
-}
-
-impl CliConfig {
-    fn from_args() -> Result<Self> {
-        let args: Vec<String> = env::args().collect();
-
-        if args.len() != 2 {
-            anyhow::bail!("Usage: {} <input.csv>", args[0]);
-        }
-
-        let config = Self {
-            input_file: PathBuf::from(&args[1]),
-        };
-
-        Ok(config)
-    }
-}
+use clap::Parser;
+use config::{CliConfig, Config};
+use std::io::{self, Write};
+use transaction_processor::engine::TransactionEngine;
+use transaction_processor::transaction::Transaction;
 
 fn main() -> Result<()> {
-    let config = CliConfig::from_args().context("Failed to parse command-line arguments")?;
+    let config = CliConfig::parse();
 
     process_transactions(&config).context("Failed to process transactions")?;
 
