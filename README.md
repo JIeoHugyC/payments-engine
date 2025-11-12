@@ -32,7 +32,7 @@ client,available,held,total,locked
 
 Run unit tests:
 ```bash
-cargo test
+cargo test --workspace
 ```
 
 Run with sample data:
