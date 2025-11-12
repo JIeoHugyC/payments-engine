@@ -4,8 +4,19 @@ A simple transaction processing engine that reads CSV transactions, handles depo
 
 ## Usage
 
+Basic usage:
 ```bash
 cargo run -- transactions.csv > accounts.csv
+```
+
+With logging disabled:
+```bash
+RUST_LOG=off cargo run -- transactions.csv > accounts.csv
+```
+
+With detailed debug logging:
+```bash
+RUST_LOG=debug cargo run -- transactions.csv > accounts.csv
 ```
 
 Input CSV format:
@@ -62,6 +73,12 @@ payments-engine/
 **Type safety**: Uses `rust_decimal::Decimal` for precise financial calculations (4 decimal places). The type system prevents incorrect operations through strongly-typed transaction types.
 
 **Error handling**: Individual transaction errors are logged but don't halt processing (as per spec: "you can ignore it and assume this is an error on our partner's side"). The engine continues processing subsequent transactions.
+
+**Logging**: Structured logging via `tracing` provides visibility into:
+- Invalid CSV records with detailed error messages
+- Transaction processing errors (insufficient funds, locked accounts, etc.)
+- Processing statistics (total processed, skipped)
+- Configurable via `RUST_LOG` environment variable
 
 ## Correctness
 
@@ -127,4 +144,13 @@ The current architecture could be extended for higher scale:
 - Partition by client ID for parallel processing
 - Use external storage for transaction history
 - Add metrics and observability
+
+## Dependencies
+
+- `rust_decimal`: Precise decimal arithmetic for financial calculations
+- `serde`: CSV serialization/deserialization
+- `csv`: Efficient CSV parsing with streaming support
+- `clap`: Command-line argument parsing with derive macros
+- `anyhow`: Ergonomic error handling and context
+- `tracing` / `tracing-subscriber`: Structured logging and diagnostics
 
