@@ -1,6 +1,8 @@
 # Payments Engine
 
-A simple transaction processing engine that reads CSV transactions, updates client accounts, handles disputes and chargebacks, and outputs account states.
+A simple transaction processing engine that reads CSV transactions,
+updates client accounts, handles disputes and chargebacks,
+and outputs account states.
 
 ## Usage
 
@@ -92,18 +94,7 @@ Based on the specification:
 
 ## Performance Considerations
 
-**Memory usage**:
-- Client accounts: O(number of unique clients), max ~64KB with u16 client IDs
-- Transaction history: O(number of transactions), needed for dispute handling
-- For the expected scale (u32 transaction IDs ≈ 4 billion max), this fits comfortably in memory
-
 **Streaming**:
 - CSV reading is streaming (doesn't load entire file)
 - Processing is O(1) per transaction
 - CSV writing is streaming (accounts written directly to stdout)
-
-**Scalability**:
-The current architecture could be extended for higher scale:
-- Partition by client ID for parallel processing
-- Use external storage for transaction history
-- Add metrics and observability
