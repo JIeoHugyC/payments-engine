@@ -326,4 +326,50 @@ mod tests {
         assert_eq!(accounts[0].total, Decimal::ZERO);
         assert!(accounts[0].locked);
     }
+    #[test]
+    fn test_locked() {
+        let mut engine = TransactionEngine::new();
+
+        engine
+            .process(Transaction {
+                tx_type: TransactionType::Deposit,
+                client: ClientId(1),
+                tx: TransactionId(1),
+                amount: Some(Decimal::new(100, 1)),
+            })
+            .unwrap();
+
+        engine
+            .process(Transaction {
+                tx_type: TransactionType::Dispute,
+                client: ClientId(1),
+                tx: TransactionId(1),
+                amount: None,
+            })
+            .unwrap();
+
+        engine
+            .process(Transaction {
+                tx_type: TransactionType::Chargeback,
+                client: ClientId(1),
+                tx: TransactionId(1),
+                amount: None,
+            })
+            .unwrap();
+
+        let accounts: Vec<_> = engine.accounts.values().collect();
+        assert_eq!(accounts[0].available, Decimal::ZERO);
+        assert_eq!(accounts[0].held, Decimal::ZERO);
+        assert_eq!(accounts[0].total, Decimal::ZERO);
+        assert!(accounts[0].locked);
+
+        let locked_err = engine.process(Transaction {
+            tx_type: TransactionType::Deposit,
+            client: ClientId(1),
+            tx: TransactionId(2),
+            amount: Some(Decimal::new(100, 1)),
+        });
+
+        assert!(locked_err.is_err());
+    }
 }
