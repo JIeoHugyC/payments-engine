@@ -7,19 +7,13 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-# Core dependencies
 anyhow = "1.0.100"
-thiserror = "1.0"
 serde = { version = "1.0.228", features = ["derive"] }
-rust_decimal = { version = "1.33", features = ["serde"] }
-csv = "1.3"
+rust_decimal = { version = "1.39.0", features = ["serde"] }
+csv = "1.4.0"
 clap = { version = "4.5.51", features = ["derive"] }
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# Internal crates
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 transaction-processor = { path = "crates/transaction-processor" }
 
 [package]

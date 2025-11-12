@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use config::{CliConfig, Config};
 use std::io;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 use transaction_processor::{engine::TransactionEngine, transaction::Transaction};
 
 fn main() -> Result<()> {
@@ -19,18 +19,11 @@ fn main() -> Result<()> {
 
     let config = CliConfig::parse();
 
-    match process_transactions(&config) {
-        Ok(_) => {
-            info!("Processing completed successfully");
+    process_transactions(&config)?;
 
-            Ok(())
-        }
-        Err(e) => {
-            error!("Processing failed: {:#}", e);
+    info!("Processing completed successfully");
 
-            Err(e)
-        }
-    }
+    Ok(())
 }
 
 fn process_transactions<C: Config>(config: &C) -> Result<()> {
@@ -48,7 +41,7 @@ fn process_transactions<C: Config>(config: &C) -> Result<()> {
         let transaction: Transaction = match result {
             Ok(tx) => tx,
             Err(e) => {
-                warn!("Failed to parse transaction: {}", e);
+                warn!("Failed to parse transaction: {e}");
                 skipped += 1;
 
                 continue;
@@ -56,17 +49,14 @@ fn process_transactions<C: Config>(config: &C) -> Result<()> {
         };
 
         if let Err(e) = engine.process(transaction) {
-            warn!("Transaction processing error: {}", e);
+            warn!("Transaction processing error: {e}");
             skipped += 1;
         } else {
             processed += 1;
         }
     }
 
-    info!(
-        "Processed {} transactions, skipped {} invalid transactions",
-        processed, skipped
-    );
+    info!("Processed {processed} transactions, skipped {skipped} invalid transactions",);
 
     let stdout = io::stdout();
     let handle = stdout.lock();

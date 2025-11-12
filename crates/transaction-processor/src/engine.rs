@@ -1,4 +1,5 @@
 use crate::transaction::{Account, Transaction, TransactionType};
+use anyhow::{anyhow, bail, Result};
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
@@ -22,7 +23,7 @@ impl TransactionEngine {
         Self::default()
     }
 
-    pub fn process(&mut self, transaction: Transaction) -> anyhow::Result<()> {
+    pub fn process(&mut self, transaction: Transaction) -> Result<()> {
         match transaction.tx_type {
             TransactionType::Deposit => self.process_deposit(transaction),
             TransactionType::Withdrawal => self.process_withdrawal(transaction),
@@ -32,10 +33,10 @@ impl TransactionEngine {
         }
     }
 
-    fn process_deposit(&mut self, tx: Transaction) -> anyhow::Result<()> {
+    fn process_deposit(&mut self, tx: Transaction) -> Result<()> {
         let amount = tx
             .amount
-            .ok_or_else(|| anyhow::anyhow!("Deposit requires amount"))?;
+            .ok_or_else(|| anyhow!("Deposit requires amount"))?;
 
         let account = self
             .accounts
@@ -43,7 +44,12 @@ impl TransactionEngine {
             .or_insert_with(|| Account::new(tx.client));
 
         if account.locked {
-            anyhow::bail!("Account is locked");
+            bail!("Account is locked");
+        }
+
+        // Check for duplicate transaction ID
+        if self.transactions.contains_key(&tx.tx) {
+            bail!("Duplicate transaction ID");
         }
 
         account.deposit(amount);
@@ -61,10 +67,10 @@ impl TransactionEngine {
         Ok(())
     }
 
-    fn process_withdrawal(&mut self, tx: Transaction) -> anyhow::Result<()> {
+    fn process_withdrawal(&mut self, tx: Transaction) -> Result<()> {
         let amount = tx
             .amount
-            .ok_or_else(|| anyhow::anyhow!("Withdrawal requires amount"))?;
+            .ok_or_else(|| anyhow!("Withdrawal requires amount"))?;
 
         let account = self
             .accounts
@@ -72,7 +78,12 @@ impl TransactionEngine {
             .or_insert_with(|| Account::new(tx.client));
 
         if account.locked {
-            anyhow::bail!("Account is locked");
+            bail!("Account is locked");
+        }
+
+        // Check for duplicate transaction ID
+        if self.transactions.contains_key(&tx.tx) {
+            bail!("Duplicate transaction ID");
         }
 
         account.withdraw(amount)?;
@@ -90,18 +101,18 @@ impl TransactionEngine {
         Ok(())
     }
 
-    fn process_dispute(&mut self, tx: Transaction) -> anyhow::Result<()> {
+    fn process_dispute(&mut self, tx: Transaction) -> Result<()> {
         let stored = self
             .transactions
             .get_mut(&tx.tx)
-            .ok_or_else(|| anyhow::anyhow!("Transaction not found"))?;
+            .ok_or_else(|| anyhow!("Transaction not found"))?;
 
         if stored.client != tx.client {
-            anyhow::bail!("Transaction belongs to different client");
+            bail!("Transaction belongs to different client");
         }
 
         if stored.disputed {
-            anyhow::bail!("Transaction already disputed");
+            bail!("Transaction already disputed");
         }
 
         stored.disputed = true;
@@ -109,25 +120,25 @@ impl TransactionEngine {
         let account = self
             .accounts
             .get_mut(&tx.client)
-            .ok_or_else(|| anyhow::anyhow!("Account not found"))?;
+            .ok_or_else(|| anyhow!("Account not found"))?;
 
         account.dispute(stored.amount);
 
         Ok(())
     }
 
-    fn process_resolve(&mut self, tx: Transaction) -> anyhow::Result<()> {
+    fn process_resolve(&mut self, tx: Transaction) -> Result<()> {
         let stored = self
             .transactions
             .get_mut(&tx.tx)
-            .ok_or_else(|| anyhow::anyhow!("Transaction not found"))?;
+            .ok_or_else(|| anyhow!("Transaction not found"))?;
 
         if stored.client != tx.client {
-            anyhow::bail!("Transaction belongs to different client");
+            bail!("Transaction belongs to different client");
         }
 
         if !stored.disputed {
-            anyhow::bail!("Transaction not under dispute");
+            bail!("Transaction not under dispute");
         }
 
         stored.disputed = false;
@@ -135,25 +146,25 @@ impl TransactionEngine {
         let account = self
             .accounts
             .get_mut(&tx.client)
-            .ok_or_else(|| anyhow::anyhow!("Account not found"))?;
+            .ok_or_else(|| anyhow!("Account not found"))?;
 
         account.resolve(stored.amount);
 
         Ok(())
     }
 
-    fn process_chargeback(&mut self, tx: Transaction) -> anyhow::Result<()> {
+    fn process_chargeback(&mut self, tx: Transaction) -> Result<()> {
         let stored = self
             .transactions
             .get(&tx.tx)
-            .ok_or_else(|| anyhow::anyhow!("Transaction not found"))?;
+            .ok_or_else(|| anyhow!("Transaction not found"))?;
 
         if stored.client != tx.client {
-            anyhow::bail!("Transaction belongs to different client");
+            bail!("Transaction belongs to different client");
         }
 
         if !stored.disputed {
-            anyhow::bail!("Transaction not under dispute");
+            bail!("Transaction not under dispute");
         }
 
         let amount = stored.amount;
@@ -161,7 +172,7 @@ impl TransactionEngine {
         let account = self
             .accounts
             .get_mut(&tx.client)
-            .ok_or_else(|| anyhow::anyhow!("Account not found"))?;
+            .ok_or_else(|| anyhow!("Account not found"))?;
 
         account.chargeback(amount);
 
