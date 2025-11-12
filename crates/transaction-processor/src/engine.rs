@@ -5,8 +5,8 @@ use std::collections::HashMap;
 /// Stored transaction for dispute handling
 #[derive(Debug, Clone)]
 struct StoredTransaction {
-    client: u16,
     amount: Decimal,
+    client: u16,
     disputed: bool,
 }
 

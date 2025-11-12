@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
-use std::env;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use transaction_processor::engine::TransactionEngine;
-use transaction_processor::transaction::Transaction;
+use std::{
+    env,
+    io::{self, Write},
+    path::{Path, PathBuf},
+};
+use transaction_processor::{engine::TransactionEngine, transaction::Transaction};
 
 /// Trait for reading configuration parameters in an elegant way
 trait Config {
@@ -58,7 +59,8 @@ fn process_transactions<C: Config>(config: &C) -> Result<()> {
         let transaction: Transaction = result.context("Failed to parse transaction")?;
 
         // Process transaction, ignoring errors for individual transactions
-        // as per spec: "you can ignore it and assume this is an error on our partners side"
+        // as per spec: "you can ignore it and assume this is an error on our partners
+        // side"
         let _ = engine.process(transaction);
     }
 

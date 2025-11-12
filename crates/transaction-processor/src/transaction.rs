@@ -1,3 +1,4 @@
+use anyhow::{bail, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -15,21 +16,24 @@ pub enum TransactionType {
 /// Transaction record from CSV
 #[derive(Debug, Clone, Deserialize)]
 pub struct Transaction {
-    #[serde(rename = "type")]
-    pub tx_type: TransactionType,
-    pub client: u16,
-    pub tx: u32,
     #[serde(default)]
     pub amount: Option<Decimal>,
+    /// Transaction ID
+    pub tx: u32,
+    /// Client ID
+    pub client: u16,
+    /// Transaction type
+    #[serde(rename = "type")]
+    pub tx_type: TransactionType,
 }
 
 /// Client account state
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Account {
-    pub client: u16,
     pub available: Decimal,
     pub held: Decimal,
     pub total: Decimal,
+    pub client: u16,
     pub locked: bool,
 }
 
@@ -37,10 +41,7 @@ impl Account {
     pub(crate) fn new(client: u16) -> Self {
         Self {
             client,
-            available: Decimal::ZERO,
-            held: Decimal::ZERO,
-            total: Decimal::ZERO,
-            locked: false,
+            ..Default::default()
         }
     }
 
@@ -49,7 +50,7 @@ impl Account {
         self.total += amount;
     }
 
-    pub(crate) fn withdraw(&mut self, amount: Decimal) -> anyhow::Result<()> {
+    pub(crate) fn withdraw(&mut self, amount: Decimal) -> Result<()> {
         if self.available >= amount {
             self.available -= amount;
             self.total -= amount;
@@ -57,7 +58,7 @@ impl Account {
             return Ok(());
         }
 
-        anyhow::bail!("Insufficient funds")
+        bail!("Insufficient funds")
     }
 
     pub(crate) fn dispute(&mut self, amount: Decimal) {
