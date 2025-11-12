@@ -2,6 +2,16 @@ use anyhow::{bail, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+/// Client ID
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct ClientId(pub u16);
+
+/// Transaction ID
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct TransactionId(pub u32);
+
 /// Transaction type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -18,19 +28,24 @@ pub enum TransactionType {
 pub struct Transaction {
     #[serde(default)]
     pub amount: Option<Decimal>,
-    /// Transaction ID
-    pub tx: u32,
-    /// Client ID
-    pub client: u16,
-    /// Transaction type
+    pub tx: TransactionId,
+    pub client: ClientId,
     #[serde(rename = "type")]
     pub tx_type: TransactionType,
 }
 
-/// Client account state
-/// Field order matches required CSV output: client,available,held,total,locked
-#[derive(Debug, Clone, Serialize, Default)]
+/// Client account state (internal representation)
+#[derive(Debug, Clone, Default)]
 pub struct Account {
+    pub available: Decimal,
+    pub held: Decimal,
+    pub total: Decimal,
+    pub locked: bool,
+}
+
+/// Account output for CSV serialization
+#[derive(Debug, Serialize)]
+pub struct AccountOutput {
     pub client: u16,
     pub available: Decimal,
     pub held: Decimal,
@@ -38,12 +53,21 @@ pub struct Account {
     pub locked: bool,
 }
 
-impl Account {
-    pub(crate) fn new(client: u16) -> Self {
+impl AccountOutput {
+    pub fn new(client: ClientId, account: &Account) -> Self {
         Self {
-            client,
-            ..Default::default()
+            client: client.0,
+            available: account.available,
+            held: account.held,
+            total: account.total,
+            locked: account.locked,
         }
+    }
+}
+
+impl Account {
+    pub(crate) fn new() -> Self {
+        Self::default()
     }
 
     pub(crate) fn deposit(&mut self, amount: Decimal) {

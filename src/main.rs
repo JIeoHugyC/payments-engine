@@ -5,7 +5,10 @@ use clap::Parser;
 use config::{CliConfig, Config};
 use std::io;
 use tracing::{info, warn};
-use transaction_processor::{engine::TransactionEngine, transaction::Transaction};
+use transaction_processor::{
+    engine::TransactionEngine,
+    transaction::{AccountOutput, Transaction},
+};
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
@@ -62,9 +65,10 @@ fn process_transactions<C: Config>(config: &C) -> Result<()> {
     let handle = stdout.lock();
     let mut writer = csv::WriterBuilder::new().from_writer(handle);
 
-    for account in engine.get_accounts() {
+    for (client_id, account) in &engine.accounts {
+        let output = AccountOutput::new(*client_id, account);
         writer
-            .serialize(account)
+            .serialize(&output)
             .context("Failed to serialize account")?;
     }
 

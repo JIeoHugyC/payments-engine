@@ -1,4 +1,4 @@
-use crate::transaction::{Account, Transaction, TransactionType};
+use crate::transaction::{Account, ClientId, Transaction, TransactionId, TransactionType};
 use anyhow::{anyhow, bail, Result};
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -7,15 +7,15 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 struct StoredTransaction {
     amount: Decimal,
-    client: u16,
+    client: ClientId,
     disputed: bool,
 }
 
 /// Main transaction processing engine
 #[derive(Default)]
 pub struct TransactionEngine {
-    accounts: HashMap<u16, Account>,
-    transactions: HashMap<u32, StoredTransaction>,
+    pub accounts: HashMap<ClientId, Account>,
+    transactions: HashMap<TransactionId, StoredTransaction>,
 }
 
 impl TransactionEngine {
@@ -38,10 +38,7 @@ impl TransactionEngine {
             .amount
             .ok_or_else(|| anyhow!("Deposit requires amount"))?;
 
-        let account = self
-            .accounts
-            .entry(tx.client)
-            .or_insert_with(|| Account::new(tx.client));
+        let account = self.accounts.entry(tx.client).or_insert_with(Account::new);
 
         if account.locked {
             bail!("Account is locked");
@@ -72,10 +69,7 @@ impl TransactionEngine {
             .amount
             .ok_or_else(|| anyhow!("Withdrawal requires amount"))?;
 
-        let account = self
-            .accounts
-            .entry(tx.client)
-            .or_insert_with(|| Account::new(tx.client));
+        let account = self.accounts.entry(tx.client).or_insert_with(Account::new);
 
         if account.locked {
             bail!("Account is locked");
@@ -178,10 +172,6 @@ impl TransactionEngine {
 
         Ok(())
     }
-
-    pub fn get_accounts(&self) -> Vec<Account> {
-        self.accounts.values().cloned().collect()
-    }
 }
 
 #[cfg(test)]
@@ -195,14 +185,14 @@ mod tests {
 
         let tx = Transaction {
             tx_type: TransactionType::Deposit,
-            client: 1,
-            tx: 1,
+            client: ClientId(1),
+            tx: TransactionId(1),
             amount: Some(Decimal::new(100, 1)), // 10.0
         };
 
         engine.process(tx).unwrap();
 
-        let accounts = engine.get_accounts();
+        let accounts: Vec<_> = engine.accounts.values().collect();
         assert_eq!(accounts.len(), 1);
         assert_eq!(accounts[0].available, Decimal::new(100, 1));
         assert_eq!(accounts[0].total, Decimal::new(100, 1));
@@ -215,8 +205,8 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Deposit,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: Some(Decimal::new(100, 1)),
             })
             .unwrap();
@@ -224,13 +214,13 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Withdrawal,
-                client: 1,
-                tx: 2,
+                client: ClientId(1),
+                tx: TransactionId(2),
                 amount: Some(Decimal::new(50, 1)),
             })
             .unwrap();
 
-        let accounts = engine.get_accounts();
+        let accounts: Vec<_> = engine.accounts.values().collect();
         assert_eq!(accounts[0].available, Decimal::new(50, 1));
         assert_eq!(accounts[0].total, Decimal::new(50, 1));
     }
@@ -242,16 +232,16 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Deposit,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: Some(Decimal::new(50, 1)),
             })
             .unwrap();
 
         let result = engine.process(Transaction {
             tx_type: TransactionType::Withdrawal,
-            client: 1,
-            tx: 2,
+            client: ClientId(1),
+            tx: TransactionId(2),
             amount: Some(Decimal::new(100, 1)),
         });
 
@@ -265,8 +255,8 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Deposit,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: Some(Decimal::new(100, 1)),
             })
             .unwrap();
@@ -274,13 +264,13 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Dispute,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: None,
             })
             .unwrap();
 
-        let accounts = engine.get_accounts();
+        let accounts: Vec<_> = engine.accounts.values().collect();
         assert_eq!(accounts[0].available, Decimal::ZERO);
         assert_eq!(accounts[0].held, Decimal::new(100, 1));
         assert_eq!(accounts[0].total, Decimal::new(100, 1));
@@ -288,13 +278,13 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Resolve,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: None,
             })
             .unwrap();
 
-        let accounts = engine.get_accounts();
+        let accounts: Vec<_> = engine.accounts.values().collect();
         assert_eq!(accounts[0].available, Decimal::new(100, 1));
         assert_eq!(accounts[0].held, Decimal::ZERO);
     }
@@ -306,8 +296,8 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Deposit,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: Some(Decimal::new(100, 1)),
             })
             .unwrap();
@@ -315,8 +305,8 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Dispute,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: None,
             })
             .unwrap();
@@ -324,13 +314,13 @@ mod tests {
         engine
             .process(Transaction {
                 tx_type: TransactionType::Chargeback,
-                client: 1,
-                tx: 1,
+                client: ClientId(1),
+                tx: TransactionId(1),
                 amount: None,
             })
             .unwrap();
 
-        let accounts = engine.get_accounts();
+        let accounts: Vec<_> = engine.accounts.values().collect();
         assert_eq!(accounts[0].available, Decimal::ZERO);
         assert_eq!(accounts[0].held, Decimal::ZERO);
         assert_eq!(accounts[0].total, Decimal::ZERO);
