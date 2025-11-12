@@ -3,9 +3,8 @@ mod config;
 use anyhow::{Context, Result};
 use clap::Parser;
 use config::{CliConfig, Config};
-use std::io::{self, Write};
-use transaction_processor::engine::TransactionEngine;
-use transaction_processor::transaction::Transaction;
+use std::io;
+use transaction_processor::{engine::TransactionEngine, transaction::Transaction};
 
 fn main() -> Result<()> {
     let config = CliConfig::parse();
@@ -33,11 +32,11 @@ fn process_transactions<C: Config>(config: &C) -> Result<()> {
         let _ = engine.process(transaction);
     }
 
-    // Write results to stdout
+    // Write results to stdout (streaming)
     let stdout = io::stdout();
-    let mut handle = stdout.lock();
+    let handle = stdout.lock();
 
-    let mut writer = csv::WriterBuilder::new().from_writer(vec![]);
+    let mut writer = csv::WriterBuilder::new().from_writer(handle);
 
     for account in engine.get_accounts() {
         writer
@@ -45,13 +44,7 @@ fn process_transactions<C: Config>(config: &C) -> Result<()> {
             .context("Failed to serialize account")?;
     }
 
-    let output = writer
-        .into_inner()
-        .context("Failed to finalize CSV output")?;
-
-    handle
-        .write_all(&output)
-        .context("Failed to write to stdout")?;
+    writer.flush().context("Failed to flush stdout")?;
 
     Ok(())
 }

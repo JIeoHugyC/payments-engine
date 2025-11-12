@@ -120,12 +120,11 @@ Based on the specification, this implementation assumes:
 **Streaming**:
 - CSV reading is streaming (doesn't load entire file)
 - Processing is O(1) per transaction
-- Output is buffered and written once
+- CSV writing is streaming (accounts written directly to stdout)
 
 **Scalability**:
 The current architecture could be extended for higher scale:
 - Partition by client ID for parallel processing
 - Use external storage for transaction history
-- Stream output instead of buffering
 - Add metrics and observability
 
