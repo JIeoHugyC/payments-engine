@@ -1,0 +1,13 @@
+[package]
+name = "transaction-processor"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+rust_decimal.workspace = true
+
+[lints]
+workspace = true
